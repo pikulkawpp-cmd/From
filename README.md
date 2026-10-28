@@ -7,7 +7,7 @@
 
 ## 1) Google Sheet + Apps Script
 1. สร้าง Google Sheet ใหม่ > Extensions > Apps Script วางโค้ดจาก `apps-script/Code.gs`
-2. Project Settings > Script properties > เพิ่ม `API_SECRET` = ข้อความลับยาวๆ (จดไว้)
+2. Project Settings > Script properties > เพิ่ม `API_SECRET` = kfdsFDF4fds1g9aFds4
 3. รันฟังก์ชัน `setup` หนึ่งครั้ง (อนุญาตสิทธิ์) จะได้แท็บ Exams และ Results
 4. Deploy > New deployment > Web app: Execute as = Me, Who has access = Anyone > คัดลอก URL (ลงท้าย /exec)
 5. แก้โค้ดภายหลังต้อง Deploy version ใหม่
