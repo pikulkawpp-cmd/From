@@ -1,9 +1,109 @@
 <!DOCTYPE html>
-<html lang="th"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ระบบข้อสอบออนไลน์</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css"></head><body>
-<header><h1>ระบบข้อสอบออนไลน์</h1><div class="who" id="who"></div></header>
-<div class="wrap" id="app"></div>
-<script src="app.js"></script></body></html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ไอคอนแสดงบนแท็บเว็บไซต์ (Favicon) -->
+    <link rel="icon" type="image/png" href="nnaa.png">
+    <!-- สำหรับรองรับอุปกรณ์ Apple / iOS -->
+    <link rel="apple-touch-icon" href="nnaa.png">
+    <title>ข้อสอบคัดเลือกครูฝึกโรงเรียนนายเรือ</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Library สำหรับแคปภาพและดาวน์โหลด -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. หน้าแรก (Start Screen) -->
+        <div id="start-screen" class="screen">
+            <div class="logo-container">
+                <img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo">
+            </div>
+            <div class="header">
+                <h2>แบบทดสอบคัดเลือกครูฝึก</h2>
+                <p>โรงเรียนนายเรือ (Royal Thai Naval Academy)</p>
+            </div>
+            <div class="welcome-card">
+                <h3>📘 รายละเอียดการทดสอบ (ระดับ: ยาก)</h3>
+                <p>• จำนวนข้อสอบทั้งหมด: <strong>20 ข้อ (ข้อละ 5 คะแนน)</strong></p>
+                <p>• คะแนนเต็ม: <strong>100 คะแนน</strong></p>
+                <p>• เกณฑ์การผ่าน: <strong>70 คะแนนขึ้นไป (ผ่านเกณฑ์)</strong></p>
+            </div>
+            <button type="button" class="btn-primary-link" onclick="goToRegister()">
+                <span>เข้าสู่ระบบการทดสอบ</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+        </div>
+
+        <!-- 2. หน้ากรอกข้อมูล (Register Screen) -->
+        <div id="register-screen" class="screen hidden">
+            <div class="logo-container">
+                <img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo">
+            </div>
+            <div class="header">
+                <h2>รายงานตัวผู้เข้ารับการทดสอบ</h2>
+                <p>กรุณาระบุข้อมูล ยศ และ ชื่อผู้ใช้ Roblox ของท่าน</p>
+            </div>
+            <form id="user-info-form" onsubmit="startQuiz(event)">
+                <div class="form-group">
+                    <label for="roblox-name">ยศ - ชื่อ Roblox</label>
+                    <input type="text" id="roblox-name" required placeholder="เช่น ร.ต. Somchai_RTNA (หรือชื่อในเกม)">
+                </div>
+                <button type="submit" class="btn-primary-link">
+                    <span>เริ่มทำแบบทดสอบ</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- 3. หน้าทำข้อสอบ (Quiz Screen) -->
+        <div id="quiz-screen" class="screen hidden">
+            <div class="header">
+                <div class="logo-container">
+                    <img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo" style="width: 75px; height: 75px;">
+                </div>
+                <h2 style="font-size: 20px;">แบบทดสอบคัดเลือกครูฝึกโรงเรียนนายเรือ</h2>
+                <p id="user-greeting" style="color: #38bdf8; font-weight: 600;"></p>
+            </div>
+
+            <form id="quiz-form">
+                <div id="questions-container"></div>
+                <button type="button" id="submit-btn" onclick="calculateScore()">ส่งข้อสอบ / ประเมินผล</button>
+            </form>
+        </div>
+
+        <!-- 4. หน้าแสดงผลการสอบ (Result Screen) -->
+        <div id="result-screen" class="screen hidden">
+            <div class="result-card" id="capture-area">
+                <div class="logo-container">
+                    <img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo" style="width: 85px; height: 85px;">
+                </div>
+                <h2>ผลการประเมิน</h2>
+                
+                <div id="status-badge"></div>
+                
+                <p id="result-name" class="result-user-text"></p>
+                
+                <div class="score-display">
+                    <span id="score-text">0</span><span class="score-total">/100</span>
+                </div>
+                
+                <p id="percentage-text" style="color: #94a3b8; font-size: 15px; margin-bottom: 12px;"></p>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn-download" onclick="downloadResultImage()">
+                    📸 บันทึกภาพผลสอบ
+                </button>
+                <button type="button" class="btn-restart" onclick="location.reload()">
+                    ทำแบบทดสอบอีกครั้ง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
