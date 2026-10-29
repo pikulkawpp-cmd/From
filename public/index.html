@@ -65,6 +65,8 @@
                     <div class="form-group"><label for="new-p1">ภาคที่ 1 (20 ข้อ)</label><input type="number" id="new-p1" value="30" min="1" max="180"></div>
                     <div class="form-group"><label for="new-p2">ภาคที่ 2 (10 ข้อ)</label><input type="number" id="new-p2" value="15" min="1" max="180"></div>
                 </div>
+                <div class="form-group" style="margin-top:14px;"><label for="new-mode">สิทธิ์การสอบ (ค่าเริ่มต้นของห้อง)</label>
+                    <select id="new-mode"><option value="both">สอบทั้งสองภาค</option><option value="1">สอบเฉพาะภาคที่ 1</option><option value="2">สอบเฉพาะภาคที่ 2</option></select></div>
                 <div class="err" id="create-err"></div>
             </div>
             <button type="button" class="btn-primary-link" onclick="createRoom()"><span>สร้างห้องสอบ</span></button>
@@ -83,7 +85,9 @@
                     <div class="form-group"><label for="set-p2">ภาคที่ 2</label><input type="number" id="set-p2" min="1" max="180"></div>
                     <button type="button" class="btn-small solid" onclick="saveSettings()">บันทึก</button>
                 </div>
-                <p class="hint">การเปลี่ยนเวลามีผลกับผู้ที่ยังไม่ได้เริ่มสอบภาคนั้น</p>
+                <div class="form-group" style="margin-top:14px;"><label for="set-mode">สิทธิ์การสอบของทุกคนในห้อง</label>
+                    <select id="set-mode"><option value="both">สอบทั้งสองภาค</option><option value="1">สอบเฉพาะภาคที่ 1</option><option value="2">สอบเฉพาะภาคที่ 2</option></select></div>
+                <p class="hint">เวลามีผลกับผู้ที่ยังไม่ได้เริ่มสอบภาคนั้น • การบันทึกสิทธิ์จะตั้งให้ทุกคนในห้อง (ปรับรายคนได้ในตารางด้านล่าง)</p>
                 <div class="err" id="set-msg"></div>
             </div>
 
@@ -96,7 +100,7 @@
             <p class="hint" id="dash-count"></p>
             <div class="table-wrap">
                 <table class="dash-table">
-                    <thead><tr><th>ยศ - ชื่อ Roblox</th><th>สิทธิ์สอบ</th><th>ภาคที่ 1</th><th>ภาคที่ 2</th><th>จัดการ</th></tr></thead>
+                    <thead><tr><th>ยศ - ชื่อ Roblox</th><th>อนุญาต</th><th>ภาคที่ให้สอบ</th><th>ภาคที่ 1</th><th>ภาคที่ 2</th><th>จัดการ</th></tr></thead>
                     <tbody id="students-body"></tbody>
                 </table>
             </div>

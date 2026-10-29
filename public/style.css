@@ -539,3 +539,11 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
     .room-code { font-size: 36px; letter-spacing: 6px; }
     .timer-clock { font-size: 26px; }
 }
+
+select, .mode-select {
+    font-family: inherit; font-size: 14px; color: #fff; padding: 12px 14px; width: 100%;
+    background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px;
+}
+select:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.25); }
+select option { background: #0f172a; color: #fff; }
+.mode-select { padding: 6px 8px; font-size: 12px; width: auto; min-width: 110px; }

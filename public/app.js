@@ -66,7 +66,7 @@ function openDash() {
 
 async function createRoom() {
     try {
-        const d = await api('/api/teacher/room', { p1: $('new-p1').value, p2: $('new-p2').value }, T.token);
+        const d = await api('/api/teacher/room', { p1: $('new-p1').value, p2: $('new-p2').value, mode: $('new-mode').value }, T.token);
         T.room = d.code; T.loaded = false;
         sessionStorage.setItem('tr', T.room);
         openDash();
@@ -87,7 +87,8 @@ async function pollTeacher() {
     }
 }
 
-function partCell(p, id) {
+function partCell(p, id, allowed) {
+    if (!allowed) return '<span class="dim">— ไม่ได้รับสิทธิ์</span>';
     if (p.status === 'new') return '<span class="dim">ยังไม่สอบ</span>';
     if (p.status === 'running') return `<span class="part-status part-wait">⏱ ${mmss(p.remainingMs)}</span><div class="dim">ตอบแล้ว ${p.answered}/${p.total}</div>`;
     const pass = p.score >= (T.last ? T.last.passScore : 70);
@@ -95,9 +96,17 @@ function partCell(p, id) {
         + `<div><button class="link-btn" data-act="reset" data-id="${id}" data-part="${p.part}">ให้สอบใหม่</button></div>`;
 }
 
+function modeSelect(s) {
+    const o = (v, t) => `<option value="${v}" ${s.mode === v ? 'selected' : ''}>${t}</option>`;
+    return `<select class="mode-select" data-act="mode" data-id="${s.id}">${o('both', 'ทั้ง 2 ภาค')}${o('1', 'เฉพาะภาค 1')}${o('2', 'เฉพาะภาค 2')}</select>`;
+}
+
 function renderTeacher(d) {
+    // กำลังเลือกสิทธิ์ในตารางอยู่ ห้ามวาดตารางใหม่ (ไม่งั้นเมนูหุบ)
+    const ae = document.activeElement;
+    if (ae && ae.classList && ae.classList.contains('mode-select')) return;
     if (!T.loaded) {
-        $('set-p1').value = d.minutes[1]; $('set-p2').value = d.minutes[2];
+        $('set-p1').value = d.minutes[1]; $('set-p2').value = d.minutes[2]; $('set-mode').value = d.mode;
         T.loaded = true;
     }
     const waiting = d.students.filter((s) => !s.approved).length;
@@ -107,13 +116,14 @@ function renderTeacher(d) {
         return `<tr>
             <td><strong>${esc(s.name)}</strong></td>
             <td>${s.approved ? '<span class="part-status part-pass">อนุญาตแล้ว</span>' : '<span class="part-status part-wait">รออนุญาต</span>'}</td>
-            <td>${partCell(s.parts[1], s.id)}</td>
-            <td>${partCell(s.parts[2], s.id)}</td>
+            <td>${modeSelect(s)}</td>
+            <td>${partCell(s.parts[1], s.id, s.mode !== '2')}</td>
+            <td>${partCell(s.parts[2], s.id, s.mode !== '1')}</td>
             <td class="act-cell">
                 <button class="btn-small ${s.approved ? '' : 'solid'}" data-act="approve" data-id="${s.id}" data-allow="${!s.approved}">${s.approved ? 'ถอนสิทธิ์' : 'อนุญาต'}</button>
                 <button class="link-btn danger-text" data-act="remove" data-id="${s.id}">ลบ</button>
             </td></tr>`;
-    }).join('') : '<tr><td colspan="5" class="dim" style="text-align:center;padding:24px;">ยังไม่มีผู้เข้าสอบ — แจ้งรหัสห้องให้ผู้เข้าสอบ</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="dim" style="text-align:center;padding:24px;">ยังไม่มีผู้เข้าสอบ — แจ้งรหัสห้องให้ผู้เข้าสอบ</td></tr>';
 }
 
 async function tPost(path, body) {
@@ -134,11 +144,16 @@ document.addEventListener('click', (e) => {
     if (act === 'remove' && confirm('ลบผู้เข้าสอบคนนี้ออกจากห้อง? ผลสอบของเขาจะหายไป')) tPost('/api/teacher/remove', { id });
 });
 
+document.addEventListener('change', (e) => {
+    const s = e.target.closest('#students-body select[data-act="mode"]');
+    if (s) { s.blur(); tPost('/api/teacher/mode', { id: s.dataset.id, mode: s.value }); }
+});
+
 const approveAll = () => tPost('/api/teacher/approve', { all: true });
 
 async function saveSettings() {
     try {
-        T.last = await api('/api/teacher/settings', { code: T.room, p1: $('set-p1').value, p2: $('set-p2').value }, T.token);
+        T.last = await api('/api/teacher/settings', { code: T.room, p1: $('set-p1').value, p2: $('set-p2').value, mode: $('set-mode').value }, T.token);
         $('set-msg').style.color = '#34d399'; $('set-msg').textContent = 'บันทึกเวลาแล้ว';
         setTimeout(() => ($('set-msg').textContent = ''), 2500);
     } catch (err) { $('set-msg').style.color = ''; $('set-msg').textContent = err.message; }
@@ -159,8 +174,12 @@ function exportCsv() {
     T.last.students.forEach((s) => {
         const [a, b] = [s.parts[1], s.parts[2]];
         const res = (p) => (p.status !== 'done' ? '-' : p.score >= T.last.passScore ? 'ผ่าน' : 'ไม่ผ่าน');
-        const both = a.status === 'done' && b.status === 'done';
-        rows.push([s.name, cell(a), res(a), cell(b), res(b), both ? a.score + b.score : '', both ? (a.score >= 70 && b.score >= 70 ? 'ผ่านการคัดเลือก' : 'ไม่ผ่าน') : 'สอบไม่ครบ']);
+        const need = s.mode === 'both' ? [a, b] : s.mode === '1' ? [a] : [b];
+        const complete = need.every((p) => p.status === 'done');
+        const sum = need.reduce((t, p) => t + (p.score || 0), 0);
+        const note = s.mode === 'both' ? '' : ` (สอบเฉพาะภาค ${s.mode})`;
+        rows.push([s.name, s.mode === '2' ? 'ไม่ได้สอบ' : cell(a), s.mode === '2' ? '-' : res(a), s.mode === '1' ? 'ไม่ได้สอบ' : cell(b), s.mode === '1' ? '-' : res(b),
+            complete ? sum : '', complete ? (need.every((p) => p.score >= T.last.passScore) ? 'ผ่านการคัดเลือก' : 'ไม่ผ่าน') + note : 'สอบไม่ครบ' + note]);
     });
     const csv = '\uFEFF' + rows.map((r) => r.map(q).join(',')).join('\r\n');
     const a = document.createElement('a');
@@ -221,9 +240,9 @@ async function loadHub() {
 function renderHub(st) {
     $('hub-wait').classList.toggle('hidden', st.approved);
     $('hub-parts').classList.toggle('hidden', !st.approved);
-    $('hub-result-btn').classList.toggle('hidden', st.parts[1].status !== 'done' && st.parts[2].status !== 'done');
+    $('hub-result-btn').classList.toggle('hidden', !st.allowed.some((p) => st.parts[p].status === 'done'));
     if (!st.approved) return;
-    $('part-cards').innerHTML = [1, 2].map((p) => {
+    $('part-cards').innerHTML = st.allowed.map((p) => {
         const m = st.meta[p], r = st.parts[p];
         const body = r.status === 'done'
             ? `<div class="part-score">${r.score} / 100</div><span class="part-status ${r.score >= st.passScore ? 'part-pass' : 'part-fail'}">${r.score >= st.passScore ? 'ผ่านเกณฑ์' : 'ไม่ผ่าน'}</span>`
@@ -323,10 +342,15 @@ function showResult(st, note) {
     show('result');
     $('result-name').textContent = `ยศ-ชื่อ: ${S.name}`;
     $('result-note').textContent = note;
+    const need = st.allowed;
     let total = 0, done = 0, allPass = true;
     [1, 2].forEach((p) => {
         const r = st.parts[p], sc = $(`part${p}-score-text`), tx = $(`part${p}-status-text`);
-        if (r.status === 'done') {
+        if (!need.includes(p)) {
+            sc.textContent = '—';
+            tx.className = 'part-status part-wait';
+            tx.textContent = 'ไม่ได้อยู่ในสิทธิ์สอบ';
+        } else if (r.status === 'done') {
             const pass = r.score >= st.passScore;
             done++; total += r.score; if (!pass) allPass = false;
             sc.textContent = `${r.score} / 100`;
@@ -339,13 +363,15 @@ function showResult(st, note) {
             tx.textContent = 'ยังไม่ได้สอบ';
         }
     });
+    const scope = need.length === 2 ? 'ทั้ง 2 ภาค' : `ภาคที่ ${need[0]}`;
     const badge = $('status-badge');
     badge.style.cssText = 'font-size:16px;padding:12px 20px;';
-    if (done < 2) { badge.className = 'part-status part-wait'; badge.textContent = `สอบแล้ว ${done}/2 ภาค — ต้องสอบให้ครบทั้ง 2 ภาค`; }
-    else if (allPass) { badge.className = 'part-status part-pass'; badge.textContent = '🎉 ผ่านการคัดเลือก (ผ่านเกณฑ์ทั้ง 2 ภาค)'; }
-    else { badge.className = 'part-status part-fail'; badge.textContent = '❌ ไม่ผ่านการคัดเลือก (ต้องผ่านเกณฑ์ 70 คะแนนทั้ง 2 ภาค)'; }
-    $('total-score-box').innerHTML = `${total} <span style="font-size:18px;color:#64748b;">/ 200</span>`;
-    $('total-percentage-box').textContent = `คิดเป็นคะแนนรวม: ${((total / 200) * 100).toFixed(1)}%`;
+    if (done < need.length) { badge.className = 'part-status part-wait'; badge.textContent = `สอบแล้ว ${done}/${need.length} ภาค — ต้องสอบให้ครบ${scope}`; }
+    else if (allPass) { badge.className = 'part-status part-pass'; badge.textContent = `🎉 ผ่านการคัดเลือก (ผ่านเกณฑ์${scope})`; }
+    else { badge.className = 'part-status part-fail'; badge.textContent = `❌ ไม่ผ่านการคัดเลือก (ต้องได้ ${st.passScore} คะแนนขึ้นไปใน${scope})`; }
+    const max = need.length * 100;
+    $('total-score-box').innerHTML = `${total} <span style="font-size:18px;color:#64748b;">/ ${max}</span>`;
+    $('total-percentage-box').textContent = `คิดเป็นคะแนนรวม: ${((total / max) * 100).toFixed(1)}%`;
 }
 
 function downloadResultImage() {

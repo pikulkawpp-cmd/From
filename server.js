@@ -87,7 +87,7 @@ function studentView(room, st) {
       questions: PART_META[run.part].questions.map((q) => ({ id: q.id, section: q.section, title: q.title, options: q.options })),
     };
   }
-  return { name: st.name, approved: st.approved, passScore: PASS_SCORE, meta, parts, current };
+  return { name: st.name, approved: st.approved, allowed: st.allowed, passScore: PASS_SCORE, meta, parts, current };
 }
 
 function teacherView(room) {
@@ -95,9 +95,9 @@ function teacherView(room) {
     .sort((a, b) => a.joinedAt - b.joinedAt)
     .map((st) => {
       finalizeStudent(st);
-      return { id: st.id, name: st.name, approved: st.approved, parts: { 1: partSummary(st, 1), 2: partSummary(st, 2) } };
+      return { id: st.id, name: st.name, approved: st.approved, mode: modeOf(st.allowed), parts: { 1: partSummary(st, 1), 2: partSummary(st, 2) } };
     });
-  return { code: room.code, minutes: room.minutes, passScore: PASS_SCORE, students };
+  return { code: room.code, minutes: room.minutes, mode: modeOf(room.allowed), passScore: PASS_SCORE, students };
 }
 
 // ---------- ตัวช่วย HTTP ----------
@@ -152,6 +152,14 @@ function getStudent(room, sid) {
   throw new HttpError(404, 'ไม่พบข้อมูลของท่านในห้องนี้ กรุณาเข้าห้องใหม่');
 }
 
+function parseMode(v) {
+  if (v === 'both' || v === undefined) return [1, 2];
+  if (v === '1') return [1];
+  if (v === '2') return [2];
+  throw new HttpError(400, 'ตัวเลือกภาคสอบไม่ถูกต้อง');
+}
+const modeOf = (arr) => (arr.length === 2 ? 'both' : String(arr[0]));
+
 function parseMinutes(v, label) {
   const n = Number(v);
   if (!Number.isInteger(n) || n < 1 || n > 180) throw new HttpError(400, `เวลา${label}ต้องเป็นตัวเลข 1–180 นาที`);
@@ -183,6 +191,7 @@ const routes = {
       code,
       createdAt: now(),
       minutes: { 1: parseMinutes(b.p1, 'ภาคที่ 1'), 2: parseMinutes(b.p2, 'ภาคที่ 2') },
+      allowed: parseMode(b.mode),
       students: new Map(),
     };
     rooms.set(code, room);
@@ -198,6 +207,10 @@ const routes = {
     requireTeacher(req);
     const room = getRoom(b.code);
     room.minutes = { 1: parseMinutes(b.p1, 'ภาคที่ 1'), 2: parseMinutes(b.p2, 'ภาคที่ 2') };
+    if (b.mode !== undefined) {
+      room.allowed = parseMode(b.mode); // ใช้กับผู้เข้าสอบทุกคนในห้อง (ปรับรายคนต่อได้)
+      for (const st of room.students.values()) st.allowed = [...room.allowed];
+    }
     send(res, 200, teacherView(room));
   },
 
@@ -211,6 +224,15 @@ const routes = {
       if (!st) throw new HttpError(404, 'ไม่พบผู้เข้าสอบ');
       st.approved = !!b.allow;
     }
+    send(res, 200, teacherView(room));
+  },
+
+  'POST /api/teacher/mode': async (req, res, b) => {
+    requireTeacher(req);
+    const room = getRoom(b.code);
+    const st = room.students.get(b.id);
+    if (!st) throw new HttpError(404, 'ไม่พบผู้เข้าสอบ');
+    st.allowed = parseMode(b.mode);
     send(res, 200, teacherView(room));
   },
 
@@ -244,7 +266,7 @@ const routes = {
     for (const s of room.students.values()) {
       if (s.name.toLowerCase() === name.toLowerCase()) throw new HttpError(409, 'ชื่อนี้มีผู้ใช้งานในห้องแล้ว (หากเป็นท่านเอง ให้แจ้งครูฝึกลบชื่อเดิมก่อน)');
     }
-    const st = { id: rid(4), sid: rid(16), name, approved: false, joinedAt: now(), attempts: {} };
+    const st = { id: rid(4), sid: rid(16), name, approved: false, allowed: [...room.allowed], joinedAt: now(), attempts: {} };
     room.students.set(st.id, st);
     send(res, 200, { code: room.code, sid: st.sid, name: st.name, state: studentView(room, st) });
   },
@@ -261,6 +283,7 @@ const routes = {
     const part = Number(b.part);
     if (![1, 2].includes(part)) throw new HttpError(400, 'ภาคไม่ถูกต้อง');
     if (!st.approved) throw new HttpError(403, 'ครูฝึกยังไม่อนุญาตให้เริ่มสอบ');
+    if (!st.allowed.includes(part)) throw new HttpError(403, 'ครูฝึกไม่ได้อนุญาตให้สอบภาคนี้');
     if (runningAttempt(st)) throw new HttpError(409, 'ท่านมีภาคที่กำลังสอบอยู่');
     if (st.attempts[part]) throw new HttpError(409, 'ท่านสอบภาคนี้แล้ว');
     const ms = room.minutes[part] * 60000;
