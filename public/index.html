@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="nnaa.png">
+    <link rel="apple-touch-icon" href="nnaa.png">
+    <title>ข้อสอบคัดเลือกครูฝึกโรงเรียนนายเรือ</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="container" id="main-container">
+
+    <!-- 1. หน้าแรก -->
+    <div id="home" class="screen">
+        <div class="logo-container"><img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo"></div>
+        <div class="header">
+            <h2>แบบทดสอบคัดเลือกครูฝึก</h2>
+            <p>โรงเรียนนายเรือ (Royal Thai Naval Academy)</p>
+        </div>
+        <div class="welcome-card">
+            <h3>📘 รายละเอียดการทดสอบ (เกณฑ์ผ่านแยกภาค)</h3>
+            <p>• <strong>ภาคที่ 1:</strong> การบริหาร การฝึก และภาวะผู้นำ (20 ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
+            <p>• <strong>ภาคที่ 2:</strong> ประมวลกฎหมายอาญา (10 ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
+            <p>• หมายเหตุ: ต้องผ่านทั้งสองภาคจึงจะถือว่าผ่านการทดสอบ และต้องได้รับอนุญาตจากครูฝึกก่อนเริ่มสอบ</p>
+        </div>
+        <button type="button" class="btn-primary-link" onclick="showStudentJoin()">
+            <span>🎓 เข้าห้องสอบ (ผู้เข้ารับการทดสอบ)</span>
+        </button>
+        <button type="button" class="btn-secondary" onclick="showTeacherLogin()">👨‍✈️ เข้าสู่ระบบครูฝึก</button>
+    </div>
+
+    <!-- 2. ครูฝึกล็อกอิน -->
+    <div id="teacher-login" class="screen hidden">
+        <div class="logo-container"><img src="nnaa.png" alt="" class="header-logo"></div>
+        <div class="header">
+            <h2>เข้าสู่ระบบครูฝึก</h2>
+            <p>กรอกรหัสครูฝึกเพื่อสร้างและควบคุมห้องสอบ</p>
+        </div>
+        <form onsubmit="teacherLogin(event)">
+            <div class="form-group">
+                <label for="t-password">รหัสครูฝึก</label>
+                <input type="password" id="t-password" required autocomplete="current-password" placeholder="••••••••">
+                <div class="err" id="t-login-err"></div>
+            </div>
+            <button type="submit" class="btn-primary-link"><span>เข้าสู่ระบบ</span></button>
+            <button type="button" class="btn-secondary" onclick="show('home')">← กลับหน้าแรก</button>
+        </form>
+    </div>
+
+    <!-- 3. แผงควบคุมครูฝึก -->
+    <div id="teacher-dash" class="screen hidden">
+        <div class="dash-top">
+            <h2>แผงควบคุมครูฝึก</h2>
+            <button type="button" class="btn-small" onclick="teacherLogout()">ออกจากระบบ</button>
+        </div>
+
+        <div id="dash-create">
+            <div class="welcome-card">
+                <h3>➕ สร้างห้องสอบใหม่</h3>
+                <p>กำหนดเวลาทำข้อสอบของแต่ละภาค (นาที) เวลาจะเริ่มนับเมื่อผู้เข้าสอบกดเริ่มภาคนั้น</p>
+                <div class="time-row">
+                    <div class="form-group"><label for="new-p1">ภาคที่ 1 (20 ข้อ)</label><input type="number" id="new-p1" value="30" min="1" max="180"></div>
+                    <div class="form-group"><label for="new-p2">ภาคที่ 2 (10 ข้อ)</label><input type="number" id="new-p2" value="15" min="1" max="180"></div>
+                </div>
+                <div class="form-group" style="margin-top:14px;"><label for="new-mode">สิทธิ์การสอบ (ค่าเริ่มต้นของห้อง)</label>
+                    <select id="new-mode"><option value="both">สอบทั้งสองภาค</option><option value="1">สอบเฉพาะภาคที่ 1</option><option value="2">สอบเฉพาะภาคที่ 2</option></select></div>
+                <div class="err" id="create-err"></div>
+            </div>
+            <button type="button" class="btn-primary-link" onclick="createRoom()"><span>สร้างห้องสอบ</span></button>
+        </div>
+
+        <div id="dash-room" class="hidden">
+            <div class="room-code-box">
+                <div class="part-title">รหัสห้องสอบ (แจ้งให้ผู้เข้าสอบกรอก)</div>
+                <div class="room-code" id="room-code">------</div>
+            </div>
+
+            <div class="welcome-card">
+                <h3>⏱ เวลาทำข้อสอบ (นาที)</h3>
+                <div class="time-row">
+                    <div class="form-group"><label for="set-p1">ภาคที่ 1</label><input type="number" id="set-p1" min="1" max="180"></div>
+                    <div class="form-group"><label for="set-p2">ภาคที่ 2</label><input type="number" id="set-p2" min="1" max="180"></div>
+                    <button type="button" class="btn-small solid" onclick="saveSettings()">บันทึก</button>
+                </div>
+                <div class="form-group" style="margin-top:14px;"><label for="set-mode">สิทธิ์การสอบของทุกคนในห้อง</label>
+                    <select id="set-mode"><option value="both">สอบทั้งสองภาค</option><option value="1">สอบเฉพาะภาคที่ 1</option><option value="2">สอบเฉพาะภาคที่ 2</option></select></div>
+                <p class="hint">เวลามีผลกับผู้ที่ยังไม่ได้เริ่มสอบภาคนั้น • การบันทึกสิทธิ์จะตั้งให้ทุกคนในห้อง (ปรับรายคนได้ในตารางด้านล่าง)</p>
+                <div class="err" id="set-msg"></div>
+            </div>
+
+            <div class="dash-actions">
+                <button type="button" class="btn-small solid" onclick="approveAll()">✅ อนุญาตทุกคน</button>
+                <button type="button" class="btn-small" onclick="exportCsv()">📄 ดาวน์โหลด CSV</button>
+                <button type="button" class="btn-small danger" onclick="closeRoom()">ปิดห้องสอบ</button>
+            </div>
+
+            <p class="hint" id="dash-count"></p>
+            <div class="table-wrap">
+                <table class="dash-table">
+                    <thead><tr><th>ยศ - ชื่อ Roblox</th><th>อนุญาต</th><th>ภาคที่ให้สอบ</th><th>ภาคที่ 1</th><th>ภาคที่ 2</th><th>จัดการ</th></tr></thead>
+                    <tbody id="students-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. ผู้เข้าสอบกรอกรหัสห้อง + ชื่อ -->
+    <div id="student-join" class="screen hidden">
+        <div class="logo-container"><img src="nnaa.png" alt="" class="header-logo"></div>
+        <div class="header">
+            <h2>รายงานตัวผู้เข้ารับการทดสอบ</h2>
+            <p>กรอกรหัสห้องที่ครูฝึกแจ้ง พร้อม ยศ และ ชื่อ Roblox</p>
+        </div>
+        <form onsubmit="studentJoin(event)">
+            <div class="form-group">
+                <label for="join-code">รหัสห้องสอบ (6 หลัก)</label>
+                <input type="text" id="join-code" required inputmode="numeric" maxlength="6" pattern="[0-9]{6}" placeholder="เช่น 482915">
+            </div>
+            <div class="form-group">
+                <label for="join-name">ยศ - ชื่อ Roblox</label>
+                <input type="text" id="join-name" required maxlength="60" placeholder="เช่น ร.ต. Somchai_RTNA">
+                <div class="err" id="join-err"></div>
+            </div>
+            <button type="submit" class="btn-primary-link"><span>เข้าห้องสอบ</span></button>
+            <button type="button" class="btn-secondary" onclick="show('home')">← กลับหน้าแรก</button>
+        </form>
+    </div>
+
+    <!-- 5. ห้องรอ / เลือกภาค -->
+    <div id="student-hub" class="screen hidden">
+        <div class="header">
+            <div class="logo-container"><img src="nnaa.png" alt="" class="header-logo" style="width:75px;height:75px;"></div>
+            <h2 style="font-size:20px;">ห้องสอบ</h2>
+            <p id="hub-name" style="color:#38bdf8;font-weight:600;"></p>
+        </div>
+
+        <div id="hub-wait" class="welcome-card wait-card">
+            <div class="spinner"></div>
+            <h3>รอครูฝึกอนุญาตให้เริ่มสอบ</h3>
+            <p>กรุณารอสักครู่ หน้านี้จะเปลี่ยนให้อัตโนมัติเมื่อครูฝึกกดอนุญาต</p>
+        </div>
+
+        <div id="hub-parts" class="hidden">
+            <div class="welcome-card ok-card">
+                <h3>✅ ครูฝึกอนุญาตแล้ว — เลือกภาคที่ต้องการสอบ</h3>
+                <p>เมื่อกดเริ่ม เวลาจะเดินทันทีและไม่หยุดแม้ปิดหน้าเว็บ ระบบจะส่งข้อสอบให้อัตโนมัติเมื่อหมดเวลา</p>
+            </div>
+            <div id="part-cards"></div>
+        </div>
+        <div class="err" id="hub-err"></div>
+        <button type="button" class="btn-secondary" id="hub-result-btn" onclick="showResultFromState()">📊 ดูผลการสอบ</button>
+        <button type="button" class="btn-secondary" onclick="leaveRoom()">ออกจากห้องสอบ</button>
+    </div>
+
+    <!-- 6. หน้าทำข้อสอบ -->
+    <div id="quiz" class="screen hidden">
+        <div class="timer-bar" id="timer-bar">
+            <div><div class="timer-label" id="timer-part">ภาคที่ 1</div><div class="timer-progress" id="timer-progress">ตอบแล้ว 0/0</div></div>
+            <div class="timer-clock" id="timer-clock">00:00</div>
+        </div>
+        <div class="header" style="margin-top:20px;">
+            <h2 style="font-size:20px;">แบบทดสอบคัดเลือกครูฝึกโรงเรียนนายเรือ</h2>
+            <p id="user-greeting" style="color:#38bdf8;font-weight:600;"></p>
+        </div>
+        <div id="questions-container"></div>
+        <div class="err" id="quiz-err"></div>
+        <button type="button" id="submit-btn" onclick="submitQuiz(false)">ส่งข้อสอบ / ประเมินผล</button>
+    </div>
+
+    <!-- 7. ผลการสอบ -->
+    <div id="result" class="screen hidden" style="text-align:center;">
+        <div class="result-card" id="capture-area">
+            <div class="logo-container"><img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo" style="width:85px;height:85px;"></div>
+            <h2>ผลการประเมินการทดสอบ</h2>
+            <p id="result-name" class="result-user-text"></p>
+            <div id="result-note" class="result-note"></div>
+            <div id="status-badge"></div>
+
+            <div class="part-result-container">
+                <div class="part-box">
+                    <div class="part-title">ภาคที่ 1: การฝึกและภาวะผู้นำ</div>
+                    <div class="part-score" id="part1-score-text">- / 100</div>
+                    <div class="part-status" id="part1-status-text">-</div>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">ภาคที่ 2: กฎหมายอาญา</div>
+                    <div class="part-score" id="part2-score-text">- / 100</div>
+                    <div class="part-status" id="part2-status-text">-</div>
+                </div>
+            </div>
+
+            <div class="part-result-container" style="margin-top:12px;">
+                <div class="part-box" style="flex:1;background:rgba(15,23,42,0.6);border:1px dashed rgba(56,189,248,0.4);">
+                    <div class="part-title" style="color:#38bdf8;">สรุปคะแนนรวมทั้งหมด</div>
+                    <div class="part-score" id="total-score-box" style="font-size:32px;color:#fff;">0 <span style="font-size:18px;color:#64748b;">/ 200</span></div>
+                    <div class="part-status" style="color:#94a3b8;font-size:13px;margin-top:4px;" id="total-percentage-box">คิดเป็น: 0%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="button" class="btn-download" onclick="downloadResultImage()">📸 บันทึกภาพผลสอบ</button>
+            <button type="button" class="btn-restart" onclick="enterHub()">กลับไปเลือกภาคสอบ</button>
+        </div>
+    </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

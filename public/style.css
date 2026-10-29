@@ -1,0 +1,549 @@
+/* รีเซ็ตค่าพื้นฐาน */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Sarabun', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* พื้นหลังธีมทหารเรือยามค่ำคืน (Deep Navy & Cyber Glow) */
+body {
+    background: radial-gradient(circle at 50% 20%, #172a45 0%, #0a1128 60%, #030712 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 20px;
+    color: #ffffff;
+}
+
+/* กรอบการ์ดหลัก สไตล์กระจกฝ้า (Glassmorphism) */
+.container {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    width: 100%;
+    max-width: 680px;
+    padding: 40px;
+    border-radius: 28px;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    box-shadow: 
+        0 30px 60px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(14, 165, 233, 0.1) inset;
+    animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.logo-container::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.4), transparent);
+    z-index: -1;
+    filter: blur(8px);
+    animation: pulseGlow 3s infinite alternate;
+}
+
+@keyframes pulseGlow {
+    from { transform: scale(0.95); opacity: 0.6; }
+    to { transform: scale(1.1); opacity: 1; }
+}
+
+.header-logo {
+    width: 95px;
+    height: 95px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid rgba(56, 189, 248, 0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    background-color: #0f172a;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.header p {
+    font-size: 14px;
+    color: #94a3b8;
+    font-weight: 300;
+}
+
+/* ส่วนการ์ดต้อนรับ */
+.welcome-card {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 22px;
+    border-radius: 18px;
+    margin-bottom: 25px;
+    text-align: left;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) inset;
+}
+
+.welcome-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #38bdf8;
+}
+
+.welcome-card p {
+    font-size: 14px;
+    color: #cbd5e1;
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+
+/* ฟอร์มกรอกข้อมูล */
+.form-group {
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #38bdf8;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+input[type="text"], input[type="password"], input[type="number"] {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    font-size: 15px;
+    color: #ffffff;
+    transition: all 0.3s ease;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    background: rgba(30, 41, 59, 0.8);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.25);
+}
+
+/* ปุ่มกดสไตล์นีออนเรืองแสง */
+.btn-primary-link {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(14, 165, 233, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: all 0.35s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: 0.5s;
+}
+
+.btn-primary-link:hover::before {
+    left: 100%;
+}
+
+.btn-primary-link:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(14, 165, 233, 0.5);
+}
+
+/* หัวข้อส่วนหมวดวิชา */
+.section-header {
+    background: linear-gradient(90deg, rgba(14, 165, 233, 0.25) 0%, rgba(30, 41, 59, 0.4) 100%);
+    color: #38bdf8;
+    border-left: 4px solid #0ea5e9;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 30px 0 15px 0;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: left;
+}
+
+/* การ์ดคำถาม */
+.question-card {
+    background: rgba(30, 41, 59, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 15px;
+    text-align: left;
+    transition: all 0.25s ease;
+}
+
+.question-card:hover {
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.question-text {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 14px;
+    color: #f1f5f9;
+    line-height: 1.5;
+}
+
+/* ตัวเลือกการตอบ */
+.options label {
+    display: flex;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.5);
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #cbd5e1;
+    transition: all 0.2s ease;
+}
+
+.options label:hover {
+    background: rgba(14, 165, 233, 0.15);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #ffffff;
+}
+
+.options input[type="radio"] {
+    margin-right: 12px;
+    accent-color: #0ea5e9;
+    transform: scale(1.1);
+}
+
+#submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+    color: white;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 25px;
+    box-shadow: 0 10px 25px rgba(14, 165, 233, 0.35);
+    transition: all 0.3s ease;
+}
+
+#submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(14, 165, 233, 0.5);
+}
+
+/* หน้าแสดงผลการประเมิน (Result Screen) */
+#result-screen {
+    text-align: center;
+}
+
+.result-card {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 30px 20px;
+    margin-bottom: 20px;
+}
+
+#result-screen h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 15px;
+}
+
+#status-badge {
+    font-size: 17px;
+    font-weight: bold;
+    padding: 14px 20px;
+    margin: 15px 0 20px 0;
+    border-radius: 14px;
+    line-height: 1.5;
+}
+
+.pass-all {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.fail-some {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.result-user-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #38bdf8;
+    margin-bottom: 10px;
+}
+
+/* สไตล์การ์ดแยกภาค */
+.part-result-container {
+    display: flex;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.part-box {
+    flex: 1;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px 12px;
+    text-align: center;
+}
+
+.part-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 8px;
+}
+
+.part-score {
+    font-size: 26px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.part-status {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+.part-pass {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+.part-fail {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
+.total-summary-box {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px dashed rgba(56, 189, 248, 0.3);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 15px;
+    color: #cbd5e1;
+}
+
+.total-summary-box span {
+    color: #38bdf8;
+    font-weight: 700;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.btn-download {
+    flex: 1;
+    background: #16a34a;
+    color: white;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    transition: 0.25s;
+}
+
+.btn-download:hover {
+    background: #15803d;
+}
+
+.btn-restart {
+    flex: 1;
+    background: #334155;
+    color: white;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: 0.25s;
+}
+
+.btn-restart:hover {
+    background: #475569;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 25px 18px;
+    }
+    .part-result-container {
+        flex-direction: column;
+    }
+    .button-group {
+        flex-direction: column;
+    }
+}
+/* ===================== ส่วนที่เพิ่ม: ระบบห้องสอบ / ครูฝึก ===================== */
+.container.wide { max-width: 980px; }
+
+.btn-secondary {
+    display: block; width: 100%; margin-top: 12px; padding: 14px 18px;
+    background: rgba(51, 65, 85, 0.6); color: #e2e8f0; font-size: 15px; font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 14px; cursor: pointer; transition: 0.25s;
+}
+.btn-secondary:hover { background: rgba(71, 85, 105, 0.8); }
+.btn-primary-link + .btn-secondary, form .btn-primary-link { margin-top: 0; }
+#home .btn-primary-link { margin-bottom: 0; }
+.btn-primary-link:disabled, #submit-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-small {
+    padding: 8px 14px; font-size: 13px; font-weight: 600; font-family: inherit; color: #e2e8f0;
+    background: rgba(51, 65, 85, 0.7); border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px; cursor: pointer; transition: 0.2s; white-space: nowrap;
+}
+.btn-small:hover { background: rgba(71, 85, 105, 0.9); }
+.btn-small.solid { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+.btn-small.solid:hover { background: #0284c7; }
+.btn-small.danger { color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+.link-btn { background: none; border: none; color: #38bdf8; font-size: 12px; font-family: inherit; cursor: pointer; padding: 2px 4px; }
+.link-btn:hover { text-decoration: underline; }
+.danger-text { color: #f87171; }
+
+.err { color: #f87171; font-size: 13px; margin-top: 8px; min-height: 0; }
+.hint { font-size: 12px; color: #94a3b8; margin: 8px 0; }
+.dim { font-size: 12px; color: #94a3b8; }
+
+.dash-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.dash-top h2 { font-size: 22px; }
+.dash-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 6px; }
+.time-row { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px; }
+.time-row .form-group { flex: 1; min-width: 120px; margin-bottom: 0; }
+#dash-create .welcome-card { margin-bottom: 20px; }
+
+.room-code-box {
+    text-align: center; padding: 18px; margin-bottom: 18px; border-radius: 18px;
+    background: rgba(14, 165, 233, 0.1); border: 1px dashed rgba(56, 189, 248, 0.5);
+}
+.room-code { font-size: 46px; font-weight: 800; letter-spacing: 10px; color: #38bdf8; padding-left: 10px; }
+
+.table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.08); }
+.dash-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+.dash-table th { text-align: left; padding: 12px; color: #38bdf8; font-size: 12px; background: rgba(30, 41, 59, 0.6); }
+.dash-table td { padding: 10px 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); vertical-align: top; color: #e2e8f0; }
+.act-cell { white-space: nowrap; }
+
+.part-wait { background-color: rgba(250, 204, 21, 0.15); color: #fde047; }
+
+.wait-card { text-align: center; }
+.wait-card p { text-align: center; }
+.ok-card { border-color: rgba(16, 185, 129, 0.4); }
+.ok-card h3 { color: #34d399; }
+.spinner {
+    width: 38px; height: 38px; margin: 0 auto 14px; border-radius: 50%;
+    border: 4px solid rgba(56, 189, 248, 0.2); border-top-color: #38bdf8; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.part-pick {
+    background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px; padding: 18px; margin-bottom: 14px; text-align: center;
+}
+.part-pick .part-title { font-size: 15px; color: #f1f5f9; }
+.pick-meta { font-size: 13px; color: #94a3b8; margin-bottom: 14px; }
+
+/* แถบจับเวลาลอยด้านบนตอนทำข้อสอบ */
+.timer-bar {
+    position: sticky; top: 8px; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 18px; border-radius: 16px; background: rgba(8, 15, 35, 0.92);
+    border: 1px solid rgba(56, 189, 248, 0.45); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.timer-label { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+.timer-progress { font-size: 12px; color: #94a3b8; }
+.timer-clock { font-size: 30px; font-weight: 800; color: #38bdf8; font-variant-numeric: tabular-nums; }
+.timer-bar.warn { border-color: rgba(250, 204, 21, 0.7); }
+.timer-bar.warn .timer-clock { color: #fde047; }
+.timer-bar.danger { border-color: rgba(239, 68, 68, 0.8); }
+.timer-bar.danger .timer-clock { color: #f87171; animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { 50% { opacity: .45; } }
+
+.result-note { color: #fde047; font-size: 14px; margin-bottom: 6px; }
+#result .button-group { margin-top: 10px; }
+
+@media (max-width: 576px) {
+    .room-code { font-size: 36px; letter-spacing: 6px; }
+    .timer-clock { font-size: 26px; }
+}
+
+select, .mode-select {
+    font-family: inherit; font-size: 14px; color: #fff; padding: 12px 14px; width: 100%;
+    background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px;
+}
+select:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.25); }
+select option { background: #0f172a; color: #fff; }
+.mode-select { padding: 6px 8px; font-size: 12px; width: auto; min-width: 110px; }
