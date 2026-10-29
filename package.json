@@ -1,0 +1,9 @@
+{
+  "name": "rtna-instructor-exam",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ระบบสอบคัดเลือกครูฝึก โรงเรียนนายเรือ (ครูฝึกควบคุมห้องสอบ + จับเวลา)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

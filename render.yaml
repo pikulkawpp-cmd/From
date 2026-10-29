@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: rtna-instructor-exam
+    runtime: node
+    plan: free
+    buildCommand: "echo no build"
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: TEACHER_PASSWORD
+        sync: false   # Render จะถามให้กรอกรหัสครูฝึกตอนสร้าง (ไม่เก็บใน GitHub)
