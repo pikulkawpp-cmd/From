@@ -17,16 +17,6 @@ const PASS_SCORE = 70;
 const GRACE_MS = 12000; // เผื่อเวลาเน็ตหน่วงตอนส่งอัตโนมัติ
 const LETTERS = ['ก', 'ข', 'ค', 'ง'];
 
-const PART_META = {
-  1: { title: 'การบริหาร การฝึก และภาวะผู้นำ' },
-  2: { title: 'ประมวลกฎหมายอาญา' },
-};
-for (const p of [1, 2]) {
-  PART_META[p].questions = QUESTIONS.filter((q) => q.part === p);
-  PART_META[p].count = PART_META[p].questions.length;
-  PART_META[p].perQ = 100 / PART_META[p].count; // ภาคละ 100 คะแนนเต็ม
-}
-
 const rooms = new Map(); // code -> room
 const tokens = new Map(); // token -> expiry
 const loginFails = new Map(); // ip -> {n, until}
@@ -34,9 +24,88 @@ const loginFails = new Map(); // ip -> {n, until}
 const now = () => Date.now();
 const rid = (n) => crypto.randomBytes(n).toString('hex');
 
+// ---------- คลังข้อสอบ (Google Sheets ผ่าน Apps Script หรือไฟล์สำรอง questions.js) ----------
+const SHEETS_URL = process.env.SHEETS_URL || '';
+const SHEETS_KEY = process.env.SHEETS_KEY || '';
+const PART_TITLES = { 1: 'การบริหาร การฝึก และภาวะผู้นำ', 2: 'ประมวลกฎหมายอาญา' };
+const ANS_MAP = { 'ก': 'ก', 'ข': 'ข', 'ค': 'ค', 'ง': 'ง', a: 'ก', b: 'ข', c: 'ค', d: 'ง', 1: 'ก', 2: 'ข', 3: 'ค', 4: 'ง' };
+
+function makeBank(list, source) {
+  const bank = { source, loadedAt: now(), parts: {} };
+  let id = 0;
+  for (const p of [1, 2]) {
+    const qs = list.filter((q) => q.part === p).map((q) => ({ ...q, id: ++id }));
+    bank.parts[p] = { title: PART_TITLES[p], questions: qs, count: qs.length, perQ: qs.length ? 100 / qs.length : 0 }; // ภาคละ 100 คะแนน
+  }
+  return bank;
+}
+
+// คอลัมน์ในชีต: A ภาค | B หมวด | C โจทย์ | D ก | E ข | F ค | G ง | H เฉลย
+function parseSheetRows(rows) {
+  const errors = [], list = [];
+  (rows || []).slice(1).forEach((r, i) => {
+    const n = i + 2;
+    const c = Array.from({ length: 8 }, (_, k) => String((r && r[k]) ?? '').trim());
+    if (c.every((x) => !x)) return;
+    const m = c[0].match(/^\D*([12])\D*$/);
+    if (!m) return errors.push(`แถว ${n}: ช่อง "ภาค" ต้องเป็น 1 หรือ 2`);
+    if (!c[2]) return errors.push(`แถว ${n}: ไม่มีโจทย์`);
+    const opts = c.slice(3, 7).map((x) => x.replace(/^[กขคง]\s*[.)]\s*/, '').trim());
+    let k = opts.length;
+    while (k > 0 && !opts[k - 1]) k--;
+    const options = opts.slice(0, k);
+    if (options.length < 2 || options.some((o) => !o)) return errors.push(`แถว ${n}: ตัวเลือกต้องมีอย่างน้อย 2 ข้อ และกรอกต่อเนื่องตั้งแต่ ก`);
+    const ans = ANS_MAP[c[7].replace(/[.)\s]/g, '').toLowerCase()];
+    if (!ans || LETTERS.indexOf(ans) >= options.length) return errors.push(`แถว ${n}: เฉลยไม่ถูกต้อง (ต้องเป็น ก ข ค ง และตรงกับตัวเลือกที่มี)`);
+    list.push({ part: Number(m[1]), section: c[1] || `ภาคที่ ${m[1]}`, title: c[2], options, answer: ans });
+  });
+  return { list, errors };
+}
+
+async function fetchSheetRows() {
+  const u = new URL(SHEETS_URL);
+  u.searchParams.set('key', SHEETS_KEY);
+  let text;
+  try {
+    const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
+    text = await r.text();
+  } catch {
+    throw new HttpError(502, 'เชื่อมต่อ Google Sheets ไม่ได้ (หมดเวลาหรือลิงก์ SHEETS_URL ไม่ถูกต้อง)');
+  }
+  let d;
+  try { d = JSON.parse(text); } catch {
+    throw new HttpError(502, 'Apps Script ตอบกลับไม่ใช่ข้อมูลข้อสอบ — ตรวจว่า Deploy เป็น Web app และตั้ง "Who has access" เป็น Anyone');
+  }
+  if (!d.ok) throw new HttpError(502, 'Apps Script แจ้งว่า: ' + (d.error || 'ไม่ทราบสาเหตุ (รหัส SHEETS_KEY อาจไม่ตรง)'));
+  return d.rows;
+}
+
+async function loadBank() {
+  if (!SHEETS_URL) {
+    return makeBank(QUESTIONS.map(({ part, section, title, options, answer }) => ({ part, section, title, options, answer })), 'local');
+  }
+  if (!SHEETS_KEY) throw new HttpError(500, 'ตั้ง SHEETS_URL แล้วแต่ยังไม่ได้ตั้ง SHEETS_KEY ใน Environment');
+  const { list, errors } = parseSheetRows(await fetchSheetRows());
+  if (errors.length) {
+    throw new HttpError(422, 'ข้อสอบใน Google Sheets มีข้อผิดพลาด:\n' + errors.slice(0, 8).join('\n') + (errors.length > 8 ? `\n…และอีก ${errors.length - 8} จุด` : ''));
+  }
+  for (const p of [1, 2]) if (!list.some((q) => q.part === p)) throw new HttpError(422, `ภาคที่ ${p} ยังไม่มีข้อสอบในชีต (ต้องมีอย่างน้อย 1 ข้อต่อภาค)`);
+  return makeBank(list, 'sheets');
+}
+
+let cachedBank = null;
+async function currentBank(fresh) {
+  if (!fresh && cachedBank && now() - cachedBank.loadedAt < 60000) return cachedBank;
+  cachedBank = await loadBank();
+  return cachedBank;
+}
+const bankCounts = (bank) => ({ 1: bank.parts[1].count, 2: bank.parts[2].count });
+const bankInfo = (bank) => ({ source: bank.source, loadedAt: bank.loadedAt, counts: bankCounts(bank) });
+
 // ---------- ตรวจคะแนน / เวลา ----------
-function grade(a, auto) {
-  const qs = PART_META[a.part].questions;
+function grade(room, a, auto) {
+  const P = room.bank.parts[a.part];
+  const qs = P.questions;
   let correct = 0;
   for (const q of qs) if (a.answers[q.id] === q.answer) correct++;
   a.submitted = true;
@@ -44,13 +113,13 @@ function grade(a, auto) {
   a.submittedAt = now();
   a.correct = correct;
   a.total = qs.length;
-  a.score = Math.round(correct * PART_META[a.part].perQ);
+  a.score = Math.round(correct * P.perQ);
 }
 
-function finalizeStudent(st) {
+function finalizeStudent(room, st) {
   for (const p of [1, 2]) {
     const a = st.attempts[p];
-    if (a && !a.submitted && now() > a.deadline + GRACE_MS) grade(a, true);
+    if (a && !a.submitted && now() > a.deadline + GRACE_MS) grade(room, a, true);
   }
 }
 
@@ -59,7 +128,7 @@ function runningAttempt(st) {
 }
 
 // ---------- มุมมองข้อมูล ----------
-function partSummary(st, p) {
+function partSummary(room, st, p) {
   const a = st.attempts[p];
   if (!a) return { status: 'new' };
   if (a.submitted) return { status: 'done', score: a.score, correct: a.correct, total: a.total, auto: a.auto };
@@ -67,16 +136,16 @@ function partSummary(st, p) {
     status: 'running',
     remainingMs: Math.max(0, a.deadline - now()),
     answered: Object.keys(a.answers).length,
-    total: PART_META[p].count,
+    total: room.bank.parts[p].count,
   };
 }
 
 function studentView(room, st) {
-  finalizeStudent(st);
-  const parts = { 1: partSummary(st, 1), 2: partSummary(st, 2) };
+  finalizeStudent(room, st);
+  const parts = { 1: partSummary(room, st, 1), 2: partSummary(room, st, 2) };
   const run = runningAttempt(st);
   const meta = {};
-  for (const p of [1, 2]) meta[p] = { title: PART_META[p].title, count: PART_META[p].count, minutes: room.minutes[p] };
+  for (const p of [1, 2]) meta[p] = { title: room.bank.parts[p].title, count: room.bank.parts[p].count, minutes: room.minutes[p] };
   let current = null;
   if (run) {
     current = {
@@ -84,7 +153,7 @@ function studentView(room, st) {
       remainingMs: Math.max(0, run.deadline - now()),
       answers: run.answers,
       // ส่งเฉพาะโจทย์ ไม่ส่งเฉลย
-      questions: PART_META[run.part].questions.map((q) => ({ id: q.id, section: q.section, title: q.title, options: q.options })),
+      questions: room.bank.parts[run.part].questions.map((q) => ({ id: q.id, section: q.section, title: q.title, options: q.options })),
     };
   }
   return { name: st.name, approved: st.approved, allowed: st.allowed, passScore: PASS_SCORE, meta, parts, current };
@@ -94,10 +163,10 @@ function teacherView(room) {
   const students = [...room.students.values()]
     .sort((a, b) => a.joinedAt - b.joinedAt)
     .map((st) => {
-      finalizeStudent(st);
-      return { id: st.id, name: st.name, approved: st.approved, mode: modeOf(st.allowed), parts: { 1: partSummary(st, 1), 2: partSummary(st, 2) } };
+      finalizeStudent(room, st);
+      return { id: st.id, name: st.name, approved: st.approved, mode: modeOf(st.allowed), parts: { 1: partSummary(room, st, 1), 2: partSummary(room, st, 2) } };
     });
-  return { code: room.code, minutes: room.minutes, mode: modeOf(room.allowed), passScore: PASS_SCORE, students };
+  return { code: room.code, minutes: room.minutes, bank: bankInfo(room.bank), mode: modeOf(room.allowed), passScore: PASS_SCORE, students };
 }
 
 // ---------- ตัวช่วย HTTP ----------
@@ -185,6 +254,7 @@ const routes = {
 
   'POST /api/teacher/room': async (req, res, b) => {
     requireTeacher(req);
+    const bank = await currentBank(true);
     let code;
     do { code = String(crypto.randomInt(100000, 1000000)); } while (rooms.has(code));
     const room = {
@@ -192,6 +262,7 @@ const routes = {
       createdAt: now(),
       minutes: { 1: parseMinutes(b.p1, 'ภาคที่ 1'), 2: parseMinutes(b.p2, 'ภาคที่ 2') },
       allowed: parseMode(b.mode),
+      bank,
       students: new Map(),
     };
     rooms.set(code, room);
@@ -252,6 +323,30 @@ const routes = {
     send(res, 200, teacherView(room));
   },
 
+  'GET /api/teacher/bank': async (req, res) => {
+    requireTeacher(req);
+    try {
+      send(res, 200, { ok: true, ...bankInfo(await currentBank(true)) });
+    } catch (e) {
+      if (e instanceof HttpError) return send(res, 200, { ok: false, error: e.message });
+      throw e;
+    }
+  },
+
+  'POST /api/teacher/reload': async (req, res, b) => {
+    requireTeacher(req);
+    const room = getRoom(b.code);
+    if ([...room.students.values()].some((st) => Object.keys(st.attempts).length)) {
+      throw new HttpError(409, 'มีผู้เริ่มสอบไปแล้ว โหลดข้อสอบใหม่กลางคันไม่ได้ (ถ้าจำเป็นให้ปิดห้องแล้วสร้างห้องใหม่)');
+    }
+    room.bank = await currentBank(true);
+    send(res, 200, teacherView(room));
+  },
+
+  'GET /api/info': async (_req, res) => {
+    try { send(res, 200, { counts: bankCounts(await currentBank(false)) }); } catch { send(res, 200, { counts: null }); }
+  },
+
   'POST /api/teacher/close': async (req, res, b) => {
     requireTeacher(req);
     rooms.delete(String(b.code || ''));
@@ -279,7 +374,7 @@ const routes = {
   'POST /api/start': async (_req, res, b) => {
     const room = getRoom(b.code);
     const st = getStudent(room, b.sid);
-    finalizeStudent(st);
+    finalizeStudent(room, st);
     const part = Number(b.part);
     if (![1, 2].includes(part)) throw new HttpError(400, 'ภาคไม่ถูกต้อง');
     if (!st.approved) throw new HttpError(403, 'ครูฝึกยังไม่อนุญาตให้เริ่มสอบ');
@@ -294,10 +389,10 @@ const routes = {
   'POST /api/answer': async (_req, res, b) => {
     const room = getRoom(b.code);
     const st = getStudent(room, b.sid);
-    finalizeStudent(st);
+    finalizeStudent(room, st);
     const a = runningAttempt(st);
     if (!a || now() > a.deadline + GRACE_MS) throw new HttpError(409, 'หมดเวลาหรือส่งข้อสอบแล้ว');
-    const q = PART_META[a.part].questions.find((x) => x.id === Number(b.q));
+    const q = room.bank.parts[a.part].questions.find((x) => x.id === Number(b.q));
     if (!q || !LETTERS.includes(b.choice)) throw new HttpError(400, 'ข้อมูลคำตอบไม่ถูกต้อง');
     a.answers[q.id] = b.choice;
     send(res, 200, { ok: true });
@@ -306,17 +401,17 @@ const routes = {
   'POST /api/submit': async (_req, res, b) => {
     const room = getRoom(b.code);
     const st = getStudent(room, b.sid);
-    finalizeStudent(st);
+    finalizeStudent(room, st);
     const a = runningAttempt(st);
     if (a) {
       // รวมคำตอบฉบับสมบูรณ์จากเครื่องผู้สอบ (กันกรณีบันทึกระหว่างทางตกหล่น) ถ้ายังอยู่ในเวลา
       if (b.answers && typeof b.answers === 'object' && now() <= a.deadline + GRACE_MS) {
-        for (const q of PART_META[a.part].questions) {
+        for (const q of room.bank.parts[a.part].questions) {
           const c = b.answers[q.id];
           if (LETTERS.includes(c)) a.answers[q.id] = c;
         }
       }
-      grade(a, !!b.auto);
+      grade(room, a, !!b.auto);
     }
     send(res, 200, studentView(room, st));
   },
@@ -363,7 +458,7 @@ const server = http.createServer(async (req, res) => {
 setInterval(() => {
   for (const [code, room] of rooms) {
     if (now() - room.createdAt > 24 * 3600 * 1000) { rooms.delete(code); continue; }
-    for (const st of room.students.values()) finalizeStudent(st);
+    for (const st of room.students.values()) finalizeStudent(room, st);
   }
   for (const [t, exp] of tokens) if (exp < now()) tokens.delete(t);
 }, 15000).unref();

@@ -22,8 +22,8 @@
         </div>
         <div class="welcome-card">
             <h3>📘 รายละเอียดการทดสอบ (เกณฑ์ผ่านแยกภาค)</h3>
-            <p>• <strong>ภาคที่ 1:</strong> การบริหาร การฝึก และภาวะผู้นำ (20 ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
-            <p>• <strong>ภาคที่ 2:</strong> ประมวลกฎหมายอาญา (10 ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
+            <p>• <strong>ภาคที่ 1:</strong> การบริหาร การฝึก และภาวะผู้นำ (<span id="cnt1">20</span> ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
+            <p>• <strong>ภาคที่ 2:</strong> ประมวลกฎหมายอาญา (<span id="cnt2">10</span> ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
             <p>• หมายเหตุ: ต้องผ่านทั้งสองภาคจึงจะถือว่าผ่านการทดสอบ และต้องได้รับอนุญาตจากครูฝึกก่อนเริ่มสอบ</p>
         </div>
         <button type="button" class="btn-primary-link" onclick="showStudentJoin()">
@@ -62,11 +62,13 @@
                 <h3>➕ สร้างห้องสอบใหม่</h3>
                 <p>กำหนดเวลาทำข้อสอบของแต่ละภาค (นาที) เวลาจะเริ่มนับเมื่อผู้เข้าสอบกดเริ่มภาคนั้น</p>
                 <div class="time-row">
-                    <div class="form-group"><label for="new-p1">ภาคที่ 1 (20 ข้อ)</label><input type="number" id="new-p1" value="30" min="1" max="180"></div>
-                    <div class="form-group"><label for="new-p2">ภาคที่ 2 (10 ข้อ)</label><input type="number" id="new-p2" value="15" min="1" max="180"></div>
+                    <div class="form-group"><label for="new-p1">ภาคที่ 1</label><input type="number" id="new-p1" value="30" min="1" max="180"></div>
+                    <div class="form-group"><label for="new-p2">ภาคที่ 2</label><input type="number" id="new-p2" value="15" min="1" max="180"></div>
                 </div>
                 <div class="form-group" style="margin-top:14px;"><label for="new-mode">สิทธิ์การสอบ (ค่าเริ่มต้นของห้อง)</label>
                     <select id="new-mode"><option value="both">สอบทั้งสองภาค</option><option value="1">สอบเฉพาะภาคที่ 1</option><option value="2">สอบเฉพาะภาคที่ 2</option></select></div>
+                <div class="bank-line" id="bank-line"></div>
+                <button type="button" class="btn-small" style="margin-top:10px;" onclick="checkBank()">🔄 ตรวจ/โหลดข้อสอบจาก Google Sheets</button>
                 <div class="err" id="create-err"></div>
             </div>
             <button type="button" class="btn-primary-link" onclick="createRoom()"><span>สร้างห้องสอบ</span></button>
@@ -97,6 +99,13 @@
                 <button type="button" class="btn-small danger" onclick="closeRoom()">ปิดห้องสอบ</button>
             </div>
 
+            <div class="welcome-card" style="margin:14px 0 0;">
+                <h3>📚 ข้อสอบในห้องนี้</h3>
+                <div class="bank-line" id="room-bank"></div>
+                <button type="button" class="btn-small" style="margin-top:10px;" onclick="reloadBank()">🔄 โหลดข้อสอบใหม่จาก Google Sheets</button>
+                <p class="hint">ข้อสอบถูกล็อกไว้กับห้องตอนสร้างห้อง แก้ในชีตทีหลังจะไม่กระทบคนที่กำลังสอบ ถ้าแก้ข้อสอบก่อนมีคนเริ่มสอบ กดปุ่มนี้เพื่อดึงฉบับล่าสุด</p>
+                <div class="err" id="reload-msg"></div>
+            </div>
             <p class="hint" id="dash-count"></p>
             <div class="table-wrap">
                 <table class="dash-table">

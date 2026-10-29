@@ -55,12 +55,44 @@ function teacherLogout() {
 function openDash() {
     show('teacher-dash');
     const has = !!T.room;
+    if (!has) checkBank();
     $('dash-create').classList.toggle('hidden', has);
     $('dash-room').classList.toggle('hidden', !has);
     if (has) {
         $('room-code').textContent = T.room;
         pollTeacher();
         pollTimer = setInterval(pollTeacher, 2000);
+    }
+}
+
+const bankText = (d) => (d.ok === false
+    ? '⚠️ ' + d.error
+    : `✅ ภาคที่ 1: ${d.counts[1]} ข้อ • ภาคที่ 2: ${d.counts[2]} ข้อ • แหล่งข้อสอบ: ${d.source === 'sheets' ? 'Google Sheets' : 'ไฟล์สำรองในระบบ (ยังไม่ได้ตั้ง Google Sheets)'}`);
+
+async function checkBank() {
+    const el = $('bank-line');
+    el.className = 'bank-line'; el.textContent = 'กำลังตรวจข้อสอบ...';
+    try {
+        const d = await api('/api/teacher/bank', undefined, T.token);
+        el.className = 'bank-line ' + (d.ok === false ? 'bad' : 'good');
+        el.textContent = bankText(d);
+    } catch (err) {
+        if (err.status === 401) return teacherLogout();
+        el.className = 'bank-line bad'; el.textContent = '⚠️ ' + err.message;
+    }
+}
+
+async function reloadBank() {
+    const el = $('reload-msg');
+    el.style.color = ''; el.textContent = 'กำลังโหลด...';
+    try {
+        T.last = await api('/api/teacher/reload', { code: T.room }, T.token);
+        renderTeacher(T.last);
+        el.style.color = '#34d399'; el.textContent = 'โหลดข้อสอบล่าสุดแล้ว';
+        setTimeout(() => { el.textContent = ''; }, 3000);
+    } catch (err) {
+        if (err.status === 401) return teacherLogout();
+        el.textContent = err.message;
     }
 }
 
@@ -73,6 +105,7 @@ async function createRoom() {
     } catch (err) {
         if (err.status === 401) return teacherLogout();
         $('create-err').textContent = err.message;
+        checkBank();
     }
 }
 
@@ -109,6 +142,8 @@ function renderTeacher(d) {
         $('set-p1').value = d.minutes[1]; $('set-p2').value = d.minutes[2]; $('set-mode').value = d.mode;
         T.loaded = true;
     }
+    $('room-bank').className = 'bank-line good';
+    $('room-bank').textContent = bankText(d.bank) + ' • โหลดเมื่อ ' + new Date(d.bank.loadedAt).toLocaleTimeString('th-TH');
     const waiting = d.students.filter((s) => !s.approved).length;
     $('dash-count').textContent = `ผู้เข้าสอบ ${d.students.length} คน • รออนุญาต ${waiting} คน`;
     $('students-body').innerHTML = d.students.length ? d.students.map((s) => {
@@ -382,6 +417,11 @@ function downloadResultImage() {
         link.click();
     });
 }
+
+// จำนวนข้อบนหน้าแรกตามข้อสอบจริง
+api('/api/info').then((d) => {
+    if (d.counts) { $('cnt1').textContent = d.counts[1]; $('cnt2').textContent = d.counts[2]; }
+}).catch(() => {});
 
 // เปิดหน้าซ้ำ (รีเฟรช) → กลับเข้าห้องเดิมต่อเวลาเดิม
 if (S) enterHub();

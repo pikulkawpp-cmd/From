@@ -9,3 +9,7 @@ services:
     envVars:
       - key: TEACHER_PASSWORD
         sync: false   # Render จะถามให้กรอกรหัสครูฝึกตอนสร้าง (ไม่เก็บใน GitHub)
+      - key: SHEETS_URL
+        sync: false   # ลิงก์ Web app ของ Apps Script (ลงท้าย /exec)
+      - key: SHEETS_KEY
+        sync: false   # รหัสเดียวกับ API_KEY ที่ตั้งใน Apps Script
