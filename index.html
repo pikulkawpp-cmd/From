@@ -26,10 +26,10 @@
                 <p>โรงเรียนนายเรือ (Royal Thai Naval Academy)</p>
             </div>
             <div class="welcome-card">
-                <h3>📘 รายละเอียดการทดสอบ (ระดับ: ยาก)</h3>
-                <p>• จำนวนข้อสอบทั้งหมด: <strong>20 ข้อ (ข้อละ 5 คะแนน)</strong></p>
-                <p>• คะแนนเต็ม: <strong>100 คะแนน</strong></p>
-                <p>• เกณฑ์การผ่าน: <strong>70 คะแนนขึ้นไป (ผ่านเกณฑ์)</strong></p>
+                <h3>📘 รายละเอียดการทดสอบ (เกณฑ์ผ่านแยกภาค)</h3>
+                <p>• <strong>ภาคที่ 1:</strong> การบริหาร การฝึก และภาวะผู้นำ (20 ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
+                <p>• <strong>ภาคที่ 2:</strong> ประมวลกฎหมายอาญา (10 ข้อ / 100 คะแนน) <br>&nbsp;&nbsp;└ <i>เกณฑ์ผ่าน: 70 คะแนนขึ้นไป</i></p>
+                <p>• หมายเหตุ: ต้องผ่านทั้งสองภาคจึงจะถือว่าผ่านการทดสอบ</p>
             </div>
             <button type="button" class="btn-primary-link" onclick="goToRegister()">
                 <span>เข้าสู่ระบบการทดสอบ</span>
@@ -74,23 +74,44 @@
             </form>
         </div>
 
-        <!-- 4. หน้าแสดงผลการสอบ (Result Screen) -->
+        <!-- 4. หน้าแสดงผลการสอบ (Result Screen แยกภาคและแสดงผลช่องคะแนน) -->
         <div id="result-screen" class="screen hidden">
             <div class="result-card" id="capture-area">
                 <div class="logo-container">
                     <img src="nnaa.png" alt="โรงเรียนนายเรือ" class="header-logo" style="width: 85px; height: 85px;">
                 </div>
-                <h2>ผลการประเมิน</h2>
-                
-                <div id="status-badge"></div>
+                <h2>ผลการประเมินการทดสอบ</h2>
                 
                 <p id="result-name" class="result-user-text"></p>
-                
-                <div class="score-display">
-                    <span id="score-text">0</span><span class="score-total">/100</span>
+
+                <!-- สถานะการประเมินภาพรวม -->
+                <div id="status-badge"></div>
+
+                <!-- การ์ดแสดงคะแนนแยกภาค (สไตล์กล่องคู่) -->
+                <div class="part-result-container">
+                    <!-- ผลภาค 1 -->
+                    <div class="part-box" id="part1-box">
+                        <div class="part-title">ภาคที่ 1: การฝึกและภาวะผู้นำ</div>
+                        <div class="part-score" id="part1-score-text">0 / 100</div>
+                        <div class="part-status" id="part1-status-text">-</div>
+                    </div>
+
+                    <!-- ผลภาค 2 -->
+                    <div class="part-box" id="part2-box">
+                        <div class="part-title">ภาคที่ 2: กฎหมายอาญา</div>
+                        <div class="part-score" id="part2-score-text">0 / 100</div>
+                        <div class="part-status" id="part2-status-text">-</div>
+                    </div>
                 </div>
-                
-                <p id="percentage-text" style="color: #94a3b8; font-size: 15px; margin-bottom: 12px;"></p>
+
+                <!-- กล่องสรุปคะแนนรวมเพิ่มเติม -->
+                <div class="part-result-container" style="margin-top: 12px;">
+                    <div class="part-box" style="flex: 1; background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(56, 189, 248, 0.4);">
+                        <div class="part-title" style="color: #38bdf8;">สรุปคะแนนรวมทั้งหมด</div>
+                        <div class="part-score" id="total-score-box" style="font-size: 32px; color: #ffffff;">0 <span style="font-size: 18px; color: #64748b;">/ 200</span></div>
+                        <div class="part-status" style="color: #94a3b8; font-size: 13px; margin-top: 4px;" id="total-percentage-box">คิดเป็น: 0%</div>
+                    </div>
+                </div>
             </div>
 
             <div class="button-group">
