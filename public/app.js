@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const SCREENS = ['home', 'teacher-login', 'teacher-dash', 'student-join', 'student-hub', 'quiz', 'result'];
+const SCREENS = ['home', 'teacher-login', 'teacher-dash', 'teacher-editor', 'student-join', 'student-hub', 'quiz', 'result'];
 
 async function api(path, body, token) {
     const opt = { method: body === undefined ? 'GET' : 'POST', headers: {} };
@@ -16,7 +16,7 @@ async function api(path, body, token) {
 let pollTimer = null;
 function show(name) {
     SCREENS.forEach((s) => $(s).classList.toggle('hidden', s !== name));
-    $('main-container').classList.toggle('wide', name === 'teacher-dash');
+    $('main-container').classList.toggle('wide', name === 'teacher-dash' || name === 'teacher-editor');
     clearInterval(pollTimer);
     window.scrollTo({ top: 0 });
 }
@@ -222,6 +222,175 @@ function exportCsv() {
     a.download = `ผลสอบ_ห้อง${T.room}.csv`;
     a.click();
 }
+
+/* ====================== แก้ไขข้อสอบ ====================== */
+const LET = ['ก', 'ข', 'ค', 'ง'];
+const E = { parts: { 1: [], 2: [] }, part: 1, dirty: false, canWrite: false, ready: false, saving: false };
+
+async function openEditor() {
+    show('teacher-editor');
+    E.ready = false;
+    $('editor-body').innerHTML = '';
+    setEditorMsg('กำลังโหลดข้อสอบจาก Google Sheets...', '');
+    $('editor-save').disabled = true;
+    try {
+        loadEditor(await api('/api/teacher/questions', undefined, T.token));
+    } catch (err) {
+        if (err.status === 401) return teacherLogout();
+        setEditorMsg('⚠️ ' + err.message, 'bad');
+    }
+}
+
+function loadEditor(d) {
+    E.parts = { 1: [], 2: [] };
+    d.questions.forEach((q) => {
+        const arr = E.parts[q.part];
+        let sec = arr.find((x) => x.name === q.section);
+        if (!sec) { sec = { name: q.section, questions: [] }; arr.push(sec); }
+        sec.questions.push({ title: q.title, options: [...q.options, '', '', '', ''].slice(0, 4), answer: q.answer });
+    });
+    E.canWrite = d.canWrite; E.dirty = false; E.ready = true; E.part = 1;
+    $('editor-save').disabled = !d.canWrite;
+    if (d.canWrite) setEditorMsg('', '');
+    else setEditorMsg('⚠️ ยังไม่ได้เชื่อมต่อ Google Sheets (ตั้ง SHEETS_URL และ SHEETS_KEY ที่ Render) จึงดูข้อสอบได้อย่างเดียว บันทึกไม่ได้', 'bad');
+    renderEditor();
+}
+
+function setEditorMsg(text, cls) { const el = $('editor-msg'); el.className = 'bank-line ' + cls; el.textContent = text; }
+function markDirty() {
+    E.dirty = true;
+    $('editor-status').textContent = '● มีการแก้ไขที่ยังไม่ได้บันทึก';
+    $('editor-status').style.color = '#fde047';
+}
+function editorCount(p) { return E.parts[p].reduce((t, s) => t + s.questions.length, 0); }
+function editorTab(p) { E.part = p; renderEditor(); }
+
+function qHtml(q, si, qi, no) {
+    const k = `data-s="${si}" data-q="${qi}"`;
+    return `<div class="ed-q"><div class="ed-q-head"><span class="ed-qno">ข้อ ${no}</span>
+        <button type="button" class="link-btn danger-text" data-ed="delq" ${k}>🗑 ลบข้อนี้</button></div>
+        <textarea rows="2" ${k} data-f="title" placeholder="พิมพ์โจทย์ที่นี่">${esc(q.title)}</textarea>
+        ${LET.map((L, i) => `<label class="ed-opt"><input type="radio" name="ans-${si}-${qi}" ${k} data-f="ans" value="${L}" ${q.answer === L ? 'checked' : ''}>
+            <span class="ed-letter">${L}.</span><input type="text" ${k} data-f="opt${i}" value="${esc(q.options[i])}" placeholder="${i < 2 ? 'ตัวเลือก (จำเป็น)' : 'ตัวเลือก (ไม่ใส่ก็ได้)'}"></label>`).join('')}
+        <div class="hint">กดวงกลมหน้าตัวเลือกที่เป็น <strong>คำตอบที่ถูกต้อง</strong></div></div>`;
+}
+
+function renderEditor() {
+    const p = E.part;
+    [1, 2].forEach((n) => {
+        const b = $('tab-p' + n);
+        b.textContent = `ภาคที่ ${n} (${editorCount(n)} ข้อ)`;
+        b.classList.toggle('active', n === p);
+    });
+    let no = 0;
+    $('editor-body').innerHTML = E.parts[p].map((sec, si) => `<div class="ed-section">
+        <div class="ed-section-head"><span class="ed-label">หมวดหมู่</span>
+            <input type="text" class="ed-sec-name" data-s="${si}" data-f="sname" value="${esc(sec.name)}" placeholder="ชื่อหมวดหมู่">
+            <button type="button" class="btn-small danger" data-ed="delsec" data-s="${si}">ลบหมวด</button></div>
+        ${sec.questions.map((q, qi) => qHtml(q, si, qi, ++no)).join('') || '<div class="dim" style="padding:8px 0;">หมวดนี้ยังไม่มีคำถาม</div>'}
+        <button type="button" class="btn-small" data-ed="addq" data-s="${si}">➕ เพิ่มคำถามในหมวดนี้</button></div>`).join('')
+        + '<button type="button" class="btn-small solid" data-ed="addsec">➕ เพิ่มหมวดหมู่ใหม่</button>';
+}
+
+function focusEditor(sel) { const el = document.querySelector('#editor-body ' + sel); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); if (el.select) el.select(); } }
+
+document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t.closest || !t.closest('#editor-body') || !E.ready) return;
+    const sec = E.parts[E.part][Number(t.dataset.s)];
+    if (!sec) return;
+    const f = t.dataset.f;
+    if (f === 'sname') sec.name = t.value;
+    else {
+        const q = sec.questions[Number(t.dataset.q)];
+        if (!q) return;
+        if (f === 'title') q.title = t.value;
+        else if (f === 'ans') q.answer = t.value;
+        else if (/^opt\d$/.test(f)) q.options[Number(f[3])] = t.value;
+    }
+    markDirty();
+});
+
+document.addEventListener('click', (e) => {
+    const b = e.target.closest('#editor-body [data-ed]');
+    if (!b || !E.ready) return;
+    const p = E.part, arr = E.parts[p], si = Number(b.dataset.s), qi = Number(b.dataset.q);
+    const blank = () => ({ title: '', options: ['', '', '', ''], answer: '' });
+    switch (b.dataset.ed) {
+        case 'addq':
+            arr[si].questions.push(blank());
+            markDirty(); renderEditor();
+            focusEditor(`textarea[data-s="${si}"][data-q="${arr[si].questions.length - 1}"]`);
+            break;
+        case 'delq':
+            if (!confirm('ลบคำถามข้อนี้?')) return;
+            arr[si].questions.splice(qi, 1);
+            markDirty(); renderEditor();
+            break;
+        case 'delsec':
+            if (!confirm(`ลบหมวด "${arr[si].name}" พร้อมคำถามทั้ง ${arr[si].questions.length} ข้อ?`)) return;
+            arr.splice(si, 1);
+            markDirty(); renderEditor();
+            break;
+        case 'addsec':
+            arr.push({ name: `ภาคที่ ${p}: หมวดใหม่`, questions: [blank()] });
+            markDirty(); renderEditor();
+            focusEditor(`input[data-s="${arr.length - 1}"][data-f="sname"]`);
+            break;
+    }
+});
+
+function editorValidate() {
+    const errs = [];
+    [1, 2].forEach((p) => {
+        let n = 0;
+        E.parts[p].forEach((sec) => sec.questions.forEach((q) => {
+            n++;
+            const tag = `ภาค ${p} ข้อ ${n}`;
+            const opts = q.options.map((x) => x.trim());
+            let k = 4; while (k > 0 && !opts[k - 1]) k--;
+            if (!q.title.trim()) errs.push(`${tag}: ยังไม่มีโจทย์`);
+            else if (k < 2 || opts.slice(0, k).some((o) => !o)) errs.push(`${tag}: ต้องมีตัวเลือกอย่างน้อย 2 ข้อ และกรอกต่อเนื่องจาก ก`);
+            else if (!q.answer || LET.indexOf(q.answer) >= k) errs.push(`${tag}: ยังไม่ได้เลือกคำตอบที่ถูกต้อง`);
+        }));
+        if (!n) errs.push(`ภาคที่ ${p} ต้องมีคำถามอย่างน้อย 1 ข้อ`);
+    });
+    return errs;
+}
+
+async function editorSave() {
+    if (E.saving || !E.ready) return;
+    const errs = editorValidate();
+    if (errs.length) {
+        setEditorMsg('ยังบันทึกไม่ได้ กรุณาแก้ไขก่อน:\n' + errs.slice(0, 8).join('\n') + (errs.length > 8 ? `\n…และอีก ${errs.length - 8} จุด` : ''), 'bad');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
+    if (!confirm('บันทึกข้อสอบลง Google Sheets?\n(ฉบับก่อนหน้าจะถูกสำรองไว้ในแท็บ "ข้อสอบ_สำรอง")')) return;
+    const questions = [];
+    [1, 2].forEach((p) => E.parts[p].forEach((sec) => sec.questions.forEach((q) => questions.push({ part: p, section: sec.name.trim(), title: q.title, options: q.options, answer: q.answer }))));
+    E.saving = true; $('editor-save').disabled = true;
+    setEditorMsg('กำลังบันทึกลง Google Sheets...', '');
+    try {
+        const r = await api('/api/teacher/questions', { questions }, T.token);
+        E.dirty = false;
+        $('editor-status').textContent = '';
+        setEditorMsg(`✅ บันทึกลง Google Sheets แล้ว (ภาคที่ 1: ${r.counts[1]} ข้อ • ภาคที่ 2: ${r.counts[2]} ข้อ)\nห้องสอบที่เปิดอยู่แล้ว ให้กด "โหลดข้อสอบใหม่" ในหน้าห้อง (ทำได้ถ้ายังไม่มีผู้เริ่มสอบ)`, 'good');
+    } catch (err) {
+        if (err.status === 401) { E.dirty = false; return teacherLogout(); }
+        setEditorMsg('⚠️ ' + err.message, 'bad');
+    }
+    E.saving = false; $('editor-save').disabled = !E.canWrite;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function editorBack() {
+    if (E.dirty && !confirm('มีการแก้ไขที่ยังไม่ได้บันทึก ออกจากหน้านี้โดยไม่บันทึกใช่หรือไม่?')) return;
+    E.dirty = false; E.ready = false;
+    $('editor-status').textContent = '';
+    openDash();
+}
+window.addEventListener('beforeunload', (e) => { if (E.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ====================== ผู้เข้าสอบ ====================== */
 let S = JSON.parse(localStorage.getItem('stu') || 'null'); // {code, sid, name}

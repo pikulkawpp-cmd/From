@@ -62,22 +62,62 @@ function parseSheetRows(rows) {
   return { list, errors };
 }
 
-async function fetchSheetRows() {
-  const u = new URL(SHEETS_URL);
-  u.searchParams.set('key', SHEETS_KEY);
+async function callSheets(payload) {
+  const write = payload !== undefined;
+  let u;
+  try { u = new URL(SHEETS_URL); } catch { throw new HttpError(500, 'SHEETS_URL ใน Environment ไม่ถูกต้อง'); }
+  const init = { redirect: 'follow', signal: AbortSignal.timeout(30000) };
+  if (write) {
+    init.method = 'POST';
+    init.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+    init.body = JSON.stringify({ key: SHEETS_KEY, ...payload });
+  } else {
+    u.searchParams.set('key', SHEETS_KEY);
+  }
   let text;
   try {
-    const r = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
+    const r = await fetch(u, init);
     text = await r.text();
   } catch {
     throw new HttpError(502, 'เชื่อมต่อ Google Sheets ไม่ได้ (หมดเวลาหรือลิงก์ SHEETS_URL ไม่ถูกต้อง)');
   }
   let d;
   try { d = JSON.parse(text); } catch {
-    throw new HttpError(502, 'Apps Script ตอบกลับไม่ใช่ข้อมูลข้อสอบ — ตรวจว่า Deploy เป็น Web app และตั้ง "Who has access" เป็น Anyone');
+    throw new HttpError(502, write
+      ? 'Apps Script ไม่รับคำสั่งบันทึก — ตรวจว่าวางโค้ด Code.gs ฉบับใหม่ (มี doPost) แล้วและ Deploy เป็น "เวอร์ชันใหม่" แล้ว'
+      : 'Apps Script ตอบกลับไม่ใช่ข้อมูลข้อสอบ — ตรวจว่า Deploy เป็น Web app และตั้ง "Who has access" เป็น Anyone');
   }
   if (!d.ok) throw new HttpError(502, 'Apps Script แจ้งว่า: ' + (d.error || 'ไม่ทราบสาเหตุ (รหัส SHEETS_KEY อาจไม่ตรง)'));
-  return d.rows;
+  return d;
+}
+const fetchSheetRows = async () => (await callSheets()).rows;
+
+// ตรวจข้อสอบที่ส่งมาจากหน้าแก้ไขในเว็บ
+function normalizeQuestions(input) {
+  if (!Array.isArray(input)) throw new HttpError(400, 'ข้อมูลข้อสอบไม่ถูกต้อง');
+  if (input.length > 500) throw new HttpError(413, 'ข้อสอบเกิน 500 ข้อ');
+  const errors = [], list = [], counter = { 1: 0, 2: 0 };
+  for (const q of input) {
+    const part = Number(q && q.part);
+    if (![1, 2].includes(part)) { errors.push('พบข้อที่ไม่ได้ระบุภาค 1 หรือ 2'); continue; }
+    const tag = `ภาค ${part} ข้อ ${++counter[part]}`;
+    const title = String(q.title || '').trim();
+    if (!title) { errors.push(`${tag}: ยังไม่มีโจทย์`); continue; }
+    if (title.length > 1500) { errors.push(`${tag}: โจทย์ยาวเกินไป`); continue; }
+    const raw = (Array.isArray(q.options) ? q.options : []).slice(0, 4).map((x) => String(x || '').trim().replace(/^[กขคง]\s*[.)]\s*/, '').trim());
+    let k = raw.length;
+    while (k > 0 && !raw[k - 1]) k--;
+    const options = raw.slice(0, k);
+    if (options.length < 2 || options.some((o) => !o)) { errors.push(`${tag}: ต้องมีตัวเลือกอย่างน้อย 2 ข้อ และกรอกต่อเนื่องตั้งแต่ ก`); continue; }
+    if (options.some((o) => o.length > 600)) { errors.push(`${tag}: ตัวเลือกยาวเกินไป`); continue; }
+    const answer = String(q.answer || '');
+    if (!LETTERS.includes(answer) || LETTERS.indexOf(answer) >= options.length) { errors.push(`${tag}: ยังไม่ได้เลือกเฉลย (หรือเฉลยชี้ไปที่ตัวเลือกที่ว่าง)`); continue; }
+    const section = String(q.section || '').trim().slice(0, 200) || `ภาคที่ ${part}`;
+    list.push({ part, section, title, options, answer });
+  }
+  for (const p of [1, 2]) if (!counter[p]) errors.push(`ภาคที่ ${p} ต้องมีข้อสอบอย่างน้อย 1 ข้อ`);
+  if (errors.length) throw new HttpError(422, 'บันทึกไม่ได้ เพราะ:\n' + errors.slice(0, 8).join('\n') + (errors.length > 8 ? `\n…และอีก ${errors.length - 8} จุด` : ''));
+  return list.sort((a, b) => a.part - b.part); // sort เสถียร: ลำดับในภาคคงเดิม
 }
 
 async function loadBank() {
@@ -341,6 +381,25 @@ const routes = {
     }
     room.bank = await currentBank(true);
     send(res, 200, teacherView(room));
+  },
+
+  'GET /api/teacher/questions': async (req, res) => {
+    requireTeacher(req);
+    const bank = await currentBank(true);
+    const questions = [];
+    for (const p of [1, 2]) for (const q of bank.parts[p].questions) questions.push({ part: p, section: q.section, title: q.title, options: q.options, answer: q.answer });
+    send(res, 200, { source: bank.source, canWrite: !!(SHEETS_URL && SHEETS_KEY), questions });
+  },
+
+  'POST /api/teacher/questions': async (req, res, b) => {
+    requireTeacher(req);
+    if (!SHEETS_URL || !SHEETS_KEY) throw new HttpError(400, 'ยังไม่ได้เชื่อมต่อ Google Sheets (ตั้ง SHEETS_URL และ SHEETS_KEY ที่ Render ก่อน) จึงบันทึกไม่ได้');
+    const list = normalizeQuestions(b.questions);
+    const rows = [['ภาค', 'หมวด', 'โจทย์', 'ก', 'ข', 'ค', 'ง', 'เฉลย']];
+    for (const q of list) rows.push([String(q.part), q.section, q.title, q.options[0] || '', q.options[1] || '', q.options[2] || '', q.options[3] || '', q.answer]);
+    await callSheets({ action: 'write', rows });
+    cachedBank = makeBank(list, 'sheets'); // ห้องที่เปิดอยู่แล้วยังใช้ฉบับเดิม จนกว่าครูจะกด "โหลดข้อสอบใหม่"
+    send(res, 200, { ok: true, counts: bankCounts(cachedBank), savedAt: now() });
   },
 
   'GET /api/info': async (_req, res) => {

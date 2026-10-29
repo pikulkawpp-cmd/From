@@ -68,7 +68,10 @@
                 <div class="form-group" style="margin-top:14px;"><label for="new-mode">สิทธิ์การสอบ (ค่าเริ่มต้นของห้อง)</label>
                     <select id="new-mode"><option value="both">สอบทั้งสองภาค</option><option value="1">สอบเฉพาะภาคที่ 1</option><option value="2">สอบเฉพาะภาคที่ 2</option></select></div>
                 <div class="bank-line" id="bank-line"></div>
-                <button type="button" class="btn-small" style="margin-top:10px;" onclick="checkBank()">🔄 ตรวจ/โหลดข้อสอบจาก Google Sheets</button>
+                <div class="dash-actions" style="margin:10px 0 0;">
+                    <button type="button" class="btn-small" onclick="checkBank()">🔄 ตรวจ/โหลดข้อสอบจาก Google Sheets</button>
+                    <button type="button" class="btn-small solid" onclick="openEditor()">✏️ แก้ไขข้อสอบ</button>
+                </div>
                 <div class="err" id="create-err"></div>
             </div>
             <button type="button" class="btn-primary-link" onclick="createRoom()"><span>สร้างห้องสอบ</span></button>
@@ -102,7 +105,10 @@
             <div class="welcome-card" style="margin:14px 0 0;">
                 <h3>📚 ข้อสอบในห้องนี้</h3>
                 <div class="bank-line" id="room-bank"></div>
-                <button type="button" class="btn-small" style="margin-top:10px;" onclick="reloadBank()">🔄 โหลดข้อสอบใหม่จาก Google Sheets</button>
+                <div class="dash-actions" style="margin:10px 0 0;">
+                    <button type="button" class="btn-small" onclick="reloadBank()">🔄 โหลดข้อสอบใหม่จาก Google Sheets</button>
+                    <button type="button" class="btn-small solid" onclick="openEditor()">✏️ แก้ไขข้อสอบ</button>
+                </div>
                 <p class="hint">ข้อสอบถูกล็อกไว้กับห้องตอนสร้างห้อง แก้ในชีตทีหลังจะไม่กระทบคนที่กำลังสอบ ถ้าแก้ข้อสอบก่อนมีคนเริ่มสอบ กดปุ่มนี้เพื่อดึงฉบับล่าสุด</p>
                 <div class="err" id="reload-msg"></div>
             </div>
@@ -114,6 +120,26 @@
                 </table>
             </div>
         </div>
+    </div>
+
+    <!-- 3.5 แก้ไขข้อสอบ (เขียนกลับ Google Sheets) -->
+    <div id="teacher-editor" class="screen hidden">
+        <div class="editor-bar">
+            <div>
+                <div class="editor-title">✏️ แก้ไขข้อสอบ</div>
+                <div class="hint" id="editor-status" style="margin:2px 0 0;"></div>
+            </div>
+            <div class="bar-actions">
+                <button type="button" class="btn-small" onclick="editorBack()">← กลับ</button>
+                <button type="button" class="btn-small solid" id="editor-save" onclick="editorSave()">💾 บันทึกลง Google Sheets</button>
+            </div>
+        </div>
+        <div class="bank-line" id="editor-msg" style="margin:12px 0;"></div>
+        <div class="part-tabs">
+            <button type="button" id="tab-p1" onclick="editorTab(1)"></button>
+            <button type="button" id="tab-p2" onclick="editorTab(2)"></button>
+        </div>
+        <div id="editor-body"></div>
     </div>
 
     <!-- 4. ผู้เข้าสอบกรอกรหัสห้อง + ชื่อ -->

@@ -552,3 +552,45 @@ select option { background: #0f172a; color: #fff; }
 .bank-line.good { color: #34d399; }
 .bank-line.bad { color: #f87171; }
 .err { white-space: pre-line; }
+
+/* ===================== ตัวแก้ไขข้อสอบ ===================== */
+.editor-bar {
+    position: sticky; top: 8px; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px; border-radius: 16px; background: rgba(8, 15, 35, 0.94);
+    border: 1px solid rgba(56, 189, 248, 0.45); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.editor-title { font-size: 18px; font-weight: 700; color: #f8fafc; }
+.bar-actions { display: flex; gap: 8px; }
+.btn-small:disabled { opacity: .5; cursor: not-allowed; }
+
+.part-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.part-tabs button {
+    flex: 1; padding: 12px; font-family: inherit; font-size: 14px; font-weight: 600; color: #94a3b8; cursor: pointer;
+    background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; transition: .2s;
+}
+.part-tabs button.active { color: #fff; background: linear-gradient(135deg, #0ea5e9, #2563eb); border-color: transparent; }
+
+.ed-section { background: rgba(30, 41, 59, 0.35); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 18px; padding: 16px; margin-bottom: 18px; }
+.ed-section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ed-label { font-size: 12px; font-weight: 700; color: #38bdf8; white-space: nowrap; }
+.ed-sec-name { font-weight: 700; padding: 10px 14px; }
+.ed-q { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+.ed-q-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ed-qno { font-weight: 700; color: #38bdf8; font-size: 14px; }
+.ed-q textarea {
+    width: 100%; resize: vertical; padding: 12px 14px; margin-bottom: 10px; font-family: inherit; font-size: 14px; line-height: 1.5; color: #fff;
+    background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px;
+}
+.ed-q textarea:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.25); }
+label.ed-opt {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 0; text-transform: none; letter-spacing: 0;
+    font-size: 14px; font-weight: 400; color: #e2e8f0;
+}
+.ed-opt input[type="radio"] { width: 20px; height: 20px; flex: none; accent-color: #22c55e; cursor: pointer; }
+.ed-opt .ed-letter { width: 22px; font-weight: 700; color: #94a3b8; flex: none; }
+.ed-opt input[type="text"] { flex: 1; padding: 10px 12px; font-size: 14px; border-radius: 10px; }
+
+@media (max-width: 576px) {
+    .ed-section { padding: 12px; }
+    .ed-section-head { flex-wrap: wrap; }
+}
